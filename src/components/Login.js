@@ -34,7 +34,7 @@ const Login = ({ setAuth }) => {
       email: email.value.trim(),
       username: " ",
       password: password.value.trim(),
-    };
+      };
 
     try {
       // Use client() directly
