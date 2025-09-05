@@ -35,6 +35,7 @@ const Login = ({ setAuth }) => {
       username: " ",
       password: password.value.trim(),
     };
+    console.log("Login payload:", payload);
 
     try {
       // Use client() directly
