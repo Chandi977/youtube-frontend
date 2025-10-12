@@ -1,4 +1,5 @@
 import Sidebar from "./Sidebar";
+import { motion } from "framer-motion";
 
 const MainLayout = ({ children, isSidebarVisible, onToggleSidebar }) => {
   return (
@@ -10,7 +11,15 @@ const MainLayout = ({ children, isSidebarVisible, onToggleSidebar }) => {
           onClick={onToggleSidebar}
         ></div>
       )}
-      <main className="flex-1 overflow-y-auto z-10 w-full">{children}</main>
+      <motion.main
+        className="flex-1 overflow-y-auto z-10 w-full"
+        animate={{
+          marginLeft: isSidebarVisible ? "15rem" : "0rem",
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
+        {children}
+      </motion.main>
     </div>
   );
 };

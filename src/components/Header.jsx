@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Menu,
   Search,
@@ -21,6 +21,7 @@ const Header = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const { user, isLoggedIn, handleLogout: contextLogout } = useUser();
 
   const handleLogout = async () => {
@@ -35,20 +36,31 @@ const Header = ({ onMenuClick }) => {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="flex justify-between items-center px-4 h-14 bg-[#0f0f0f] border-b border-gray-800 sticky top-0 z-50">
       {/* Left Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={onMenuClick}
           aria-label="Toggle sidebar"
           className="p-2 rounded-full hover:bg-gray-800"
         >
-          <Menu size={24} />
+          <Menu size={22} />
         </button>
         <Link to="/" className="flex items-center gap-1 cursor-pointer">
-          <Youtube color="#FF0000" size={28} />
-          <span className="text-xl font-semibold tracking-tighter">
+          <Youtube color="#FF0000" size={24} />
+          <span className="text-lg sm:text-xl font-semibold tracking-tighter">
             YouTube
           </span>
         </Link>
@@ -89,17 +101,17 @@ const Header = ({ onMenuClick }) => {
             aria-label="Upload video"
             className="p-2 rounded-full hover:bg-gray-800"
           >
-            <Video size={24} />
+            <Video size={22} />
           </button>
         </Link>
         <button
           aria-label="Notifications"
           className="p-2 rounded-full hover:bg-gray-800"
         >
-          <Bell size={24} />
+          <Bell size={22} />
         </button>
         {isLoggedIn && user ? (
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
               <img
                 src={secureUrl(user.avatar)}
@@ -156,7 +168,10 @@ const Header = ({ onMenuClick }) => {
                   <Radio size={18} /> Go Live
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
                   className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-700"
                 >
                   <LogOut size={18} /> Sign Out
@@ -166,8 +181,9 @@ const Header = ({ onMenuClick }) => {
           </div>
         ) : (
           <Link to="/login">
-            <button className="flex items-center gap-2 border border-gray-700 px-3 py-1.5 rounded-full text-blue-400 hover:bg-blue-900/50">
-              <User size={20} /> Sign In
+            <button className="flex items-center gap-2 border border-gray-700 sm:px-3 px-2 py-1.5 rounded-full text-blue-400 hover:bg-blue-900/50">
+              <User size={18} />
+              <span className="hidden sm:inline">Sign In</span>
             </button>
           </Link>
         )}

@@ -37,8 +37,8 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-3.5rem)] bg-[#0f0f0f]">
-      <div className="w-full max-w-md p-8 space-y-6 bg-[#121212] rounded-lg shadow-md">
+    <div className="flex justify-center items-center min-h-[calc(100vh-3.5rem)] bg-[#0f0f0f] px-4 sm:px-0">
+      <div className="w-full max-w-md space-y-6 sm:p-8 sm:bg-[#121212] sm:rounded-lg sm:shadow-md">
         <h1 className="text-2xl font-bold text-center text-white">Login</h1>
         {error && <p className="text-red-500 text-center text-sm">{error}</p>}
 

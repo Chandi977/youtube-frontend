@@ -30,42 +30,54 @@ const ChannelPage = () => {
     const fetchChannelData = async () => {
       setLoading(true);
       setError(null);
+
       try {
+        // Fetch channel profile
         const profileRes = await getUserChannelProfile(username);
-        if (!profileRes.data.success || !profileRes.data.data) {
+        const channelData = profileRes?.data?.data;
+
+        if (!profileRes?.data?.success || !channelData) {
           throw new Error("Channel not found.");
         }
-        const channelData = profileRes.data.data;
-        // Safely initialize subscribersCount
+
+        // Safely initialize subscribers count
         channelData.subscribersCount =
           Number(channelData.subscribersCount) || 0;
 
-        // Fetch videos, subscribers, and subscription status in parallel
+        // Fetch videos, subscribers, and subscriber count in parallel
         const [videosRes, subscribersRes, countRes] = await Promise.all([
-          getUserVideos(channelData._id),
-          getChannelSubscribers(channelData._id),
-          getChannelSubscriberCount(channelData._id),
+          getUserVideos(channelData._id).catch(() => ({ data: { data: [] } })),
+          getChannelSubscribers(channelData._id).catch(() => ({
+            data: { data: [] },
+          })),
+          getChannelSubscriberCount(channelData._id).catch(() => 0),
         ]);
+
         channelData.subscribersCount = countRes || 0;
 
-        // Check initial subscription status if a user is logged in
+        // Check subscription status if user is logged in
         if (isLoggedIn && currentUser?._id) {
-          const subscribedChannelsRes = await subscribedChannelsRes(
-            currentUser._id
-          );
-          channelData.isSubscribed =
-            subscribedChannelsRes.some(
-              (sub) => sub.channel._id === channelData._id
-            ) || false;
+          try {
+            const subscribedChannelsRes = await getSubscribedChannels(
+              currentUser._id
+            );
+            channelData.isSubscribed =
+              subscribedChannelsRes?.data?.data?.some(
+                (sub) => sub.channel._id === channelData._id
+              ) || false;
+          } catch (err) {
+            console.warn("Failed to fetch subscribed channels, ignoring:", err);
+            channelData.isSubscribed = false;
+          }
         }
 
+        // Set state safely
         setChannel(channelData);
-        setSubscribers(subscribersRes.data.data || []);
-        // The API might return an object with a `videos` property
-        setVideos(videosRes.data?.data?.videos || videosRes.data?.data || []);
+        setSubscribers(subscribersRes?.data?.data || []);
+        setVideos(videosRes?.data?.data?.videos || videosRes?.data?.data || []);
       } catch (err) {
         console.error("Failed to fetch channel data:", err);
-        setError(err.message || "Could not load channel.");
+        setError(err?.message || "Could not load channel.");
       } finally {
         setLoading(false);
       }
@@ -207,12 +219,13 @@ const ChannelPage = () => {
                   title={video.title}
                   views={video.views}
                   timestamp={video.createdAt}
-                  channel={channel.username}
-                  channelAvatar={channel.avatar}
+                  channel={video.owner?.username || channel.username} // fallback
+                  channelAvatar={video.owner?.avatar || channel.avatar} // fallback
                 />
               ))}
           </div>
         )}
+
         {activeTab === "community" && <CommunityTab channel={channel} />}
         {activeTab === "subscribers" && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

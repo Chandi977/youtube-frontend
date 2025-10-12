@@ -52,8 +52,8 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-3.5rem)] bg-[#0f0f0f]">
-      <div className="w-full max-w-md p-8 space-y-6 bg-[#121212] rounded-lg shadow-md">
+    <div className="flex justify-center items-center min-h-[calc(100vh-3.5rem)] bg-[#0f0f0f] px-4 sm:px-0">
+      <div className="w-full max-w-md space-y-6 sm:p-8 sm:bg-[#121212] sm:rounded-lg sm:shadow-md">
         <h1 className="text-2xl font-bold text-center text-white">
           Create an Account
         </h1>
@@ -169,13 +169,13 @@ const RegisterPage = () => {
             onClick={() => handleOAuthLogin("google")}
             className="w-full px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
           >
-            Continue with Google
+            <span className="hidden xs:inline">Continue with </span>Google
           </button>
           <button
             onClick={() => handleOAuthLogin("github")}
             className="w-full px-4 py-2 text-white bg-gray-800 rounded-md hover:bg-gray-900"
           >
-            Continue with GitHub
+            <span className="hidden xs:inline">Continue with </span>GitHub
           </button>
         </div>
 

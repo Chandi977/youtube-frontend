@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getChannelStats, getChannelVideos } from "../lib/api";
+import { Link } from "react-router-dom";
 import VideoCard from "../components/VideoCard";
 import { Video, Users, ThumbsUp, Eye } from "lucide-react";
 import { useUser } from "../components/UserContext";
@@ -104,7 +105,17 @@ const DashboardPage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-gray-400">You haven't uploaded any videos yet.</p>
+          <div className="text-center py-10 bg-[#121212] rounded-lg">
+            <p className="text-gray-400 text-lg">
+              You haven't uploaded any videos yet.
+            </p>
+            <Link
+              to="/upload"
+              className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors"
+            >
+              Upload your first video
+            </Link>
+          </div>
         )}
       </div>
     </div>

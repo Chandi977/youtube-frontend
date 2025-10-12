@@ -139,11 +139,6 @@ export const getCommentLikes = async (commentId) => {
   return res.data.data;
 };
 
-export const toggleTweetLike = async (tweetId) => {
-  const res = await api.post(`/likes/t/${tweetId}/toggle`);
-  return res.data.data;
-};
-
 export const getTweetLikes = async (tweetId) => {
   const res = await api.get(`/likes/t/${tweetId}`);
   return res.data.data;
@@ -155,10 +150,43 @@ export const getAllLikedVideos = async () => {
   return res.data.data;
 };
 
-// ================= TWEET APIs =================
-export const createTweet = (data) => api.post("/tweets", data);
+/// ================= TWEET APIs =================
+export const createTweet = async (data) => {
+  // `data` = { content, imageFile, parentTweetId }
+  const formData = new FormData();
+  if (data.content) formData.append("content", data.content);
+  if (data.imageFile) formData.append("image", data.imageFile); // must match multer field
+  if (data.parentTweetId) formData.append("parentTweetId", data.parentTweetId);
+
+  return api.post("/tweets", formData);
+};
+
 export const getUserTweets = (userId) => api.get(`/tweets/user/${userId}`);
+export const updateTweet = (tweetId, data) =>
+  api.patch(`/tweets/${tweetId}`, data);
 export const deleteTweet = (tweetId) => api.delete(`/tweets/${tweetId}`);
+export const toggleTweetLike = (tweetId) => api.post(`/tweets/${tweetId}/like`);
+export const toggleShareTweet = (tweetId) =>
+  api.post(`/tweets/${tweetId}/share`);
+export const getTweetReplies = (tweetId) =>
+  api.get(`/tweets/${tweetId}/replies`);
+
+// ================= TWEET COMMENTS APIs =================
+export const getTweetComments = (tweetId, params = {}) =>
+  api.get(`/tweets/${tweetId}/comments`, { params });
+
+export const addTweetComment = (tweetId, data) => {
+  // `data` = { content, parentId? }
+  return api.post(`/tweets/${tweetId}/comments`, data);
+};
+
+export const updateTweetComment = (commentId, data) => {
+  // `data` = { updateContent }
+  return api.patch(`/comments/c/${commentId}`, data);
+};
+
+export const deleteTweetComment = (commentId) =>
+  api.delete(`/comments/c/${commentId}`);
 
 // ================= COMMENT APIs =================
 export const getVideoComments = (videoId, params) =>
@@ -166,9 +194,9 @@ export const getVideoComments = (videoId, params) =>
 export const addComment = (data, params) =>
   api.post("/comments", data, { params });
 export const updateComment = (commentId, data) =>
-  api.patch(`/comments/${commentId}`, data);
+  api.patch(`/comments/c/${commentId}`, data);
 export const deleteComment = (commentId) =>
-  api.delete(`/comments/${commentId}`);
+  api.delete(`/comments/c/${commentId}`);
 
 // ================= LIVE STREAM APIs =================
 export const getLiveStreams = () => api.get(`/livestreams`);
