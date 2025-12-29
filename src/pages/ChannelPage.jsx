@@ -8,6 +8,7 @@ import {
   toggleSubscription,
   getChannelSubscribers,
   getChannelSubscriberCount,
+  getSubscribedChannels,
 } from "../lib/api";
 import { useUser } from "../components/UserContext";
 import { secureUrl } from "../lib/utils";
@@ -217,7 +218,7 @@ const ChannelPage = () => {
                   videoId={video._id}
                   thumbnail={video.thumbnail}
                   title={video.title}
-                  views={video.views}
+                  views={video.viewsCount ?? video.views ?? 0}
                   timestamp={video.createdAt}
                   channel={video.owner?.username || channel.username} // fallback
                   channelAvatar={video.owner?.avatar || channel.avatar} // fallback

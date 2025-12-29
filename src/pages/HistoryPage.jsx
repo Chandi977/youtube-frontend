@@ -11,12 +11,17 @@ const HistoryPage = () => {
 
   useEffect(() => {
     if (userLoading) return;
-    if (!isLoggedIn) return; // Also ensure user is logged in
+    if (!isLoggedIn) {
+      setLoading(false);
+      setError("You must be logged in to view watch history.");
+      return; // Also ensure user is logged in
+    }
     const fetchHistory = async () => {
       try {
         setLoading(true);
         const response = await getWatchHistory();
         setVideos(response.data.data || []);
+        // console.log(response.data.data);
       } catch (err) {
         setError(
           "Failed to fetch watch history. Please make sure you are logged in."
@@ -37,24 +42,19 @@ const HistoryPage = () => {
       <h1 className="text-2xl font-bold mb-6">Watch History</h1>
       <div className="flex flex-col gap-4">
         {videos.length > 0 ? (
-          videos.map((historyItem) => {
-            const video = historyItem.video;
-            return (
-              video && (
-                <VideoCard
-                  key={historyItem._id} // Use history item's _id for the key
-                  videoId={video._id}
-                  thumbnail={video.thumbnail}
-                  title={video.title}
-                  views={video.views}
-                  timestamp={video.createdAt}
-                  channel={video.owner?.username} // Explicitly pass the username
-                  channelAvatar={video.owner?.avatar}
-                  variant="horizontal"
-                />
-              )
-            );
-          })
+          videos.map((video) => (
+            <VideoCard
+              key={video._id}
+              videoId={video._id}
+              thumbnail={video.thumbnail}
+              title={video.title}
+              views={video.viewsCount ?? video.views ?? 0}
+              timestamp={video.createdAt}
+              channel={video.owner?.username}
+              channelAvatar={video.owner?.avatar}
+              variant="horizontal"
+            />
+          ))
         ) : (
           <p>Your watch history is empty.</p>
         )}

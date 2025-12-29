@@ -10,6 +10,8 @@ import {
 import { secureUrl } from "../lib/utils";
 import Comment from "./Comment";
 
+const PAGE_SIZE = 10;
+
 const CommunityComment = ({ tweetId }) => {
   const { user, isLoggedIn } = useUser();
   const [comments, setComments] = useState([]);
@@ -23,7 +25,7 @@ const CommunityComment = ({ tweetId }) => {
     try {
       const response = await getTweetComments(tweetId, {
         page: currentPage,
-        limit: 10,
+        limit: PAGE_SIZE,
       });
       const fetchedComments = response.data?.data;
 
@@ -31,7 +33,8 @@ const CommunityComment = ({ tweetId }) => {
         setComments((prev) =>
           currentPage === 1 ? fetchedComments : [...prev, ...fetchedComments]
         );
-        setHasMore(fetchedComments.length > 0);
+        setHasMore(fetchedComments.length === PAGE_SIZE);
+        setPage(currentPage);
       } else {
         setComments((prev) => (currentPage === 1 ? [] : prev));
         setHasMore(false);
@@ -46,6 +49,7 @@ const CommunityComment = ({ tweetId }) => {
 
   useEffect(() => {
     if (!tweetId) return;
+    setPage(1);
     fetchComments(1); // Fetch first page on tweetId change
   }, [tweetId]);
 
@@ -152,7 +156,10 @@ const CommunityComment = ({ tweetId }) => {
       </div>
       {hasMore && !loading && (
         <button
-          onClick={() => fetchComments(page + 1)}
+          onClick={() => {
+            const nextPage = page + 1;
+            fetchComments(nextPage);
+          }}
           className="text-blue-500 hover:underline mt-4"
         >
           Load More Comments

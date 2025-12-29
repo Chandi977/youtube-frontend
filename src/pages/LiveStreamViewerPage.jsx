@@ -7,6 +7,10 @@ import { useUser } from "../components/UserContext";
 import { secureUrl } from "../lib/utils";
 import VideoPlayer from "../components/VideoPlayer";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || window.location.origin || "http://localhost:8000"
+).replace(/\/$/, "");
+
 const LiveStreamViewerPage = () => {
   const { streamId } = useParams();
   const [stream, setStream] = useState(null);
@@ -17,9 +21,7 @@ const LiveStreamViewerPage = () => {
   // Construct the HLS playback URL.
   // This assumes your backend media server exposes HLS streams at a `/live` path.
   // e.g., http://your-backend.com/live/STREAM_KEY.m3u8
-  const hlsSrc = stream
-    ? `${import.meta.env.VITE_API_URL}/live/${stream.streamKey}.m3u8`
-    : "";
+  const hlsSrc = stream ? `${API_BASE_URL}/live/${stream.streamKey}.m3u8` : "";
 
   useEffect(() => {
     if (!streamId) return;

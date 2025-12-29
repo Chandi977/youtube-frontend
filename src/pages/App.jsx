@@ -28,9 +28,7 @@ const GoLivePage = lazy(() => import("./GoLivePage"));
 const LiveStreamViewerPage = lazy(() => import("./LiveStreamViewerPage"));
 const HealthCheckPage = lazy(() => import("./HealthCheckPage"));
 
-const VideoGridSkeleton = lazy(() =>
-  import("../components/skeletons/VideoGridSkeleton")
-);
+const VideoGridSkeleton = lazy(() => import("./VideoGridSkeleton"));
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(

@@ -4,6 +4,9 @@ import { getLiveStreams } from "../lib/api";
 import { Helmet } from "react-helmet-async";
 import { secureUrl } from "../lib/utils";
 
+const FALLBACK_THUMBNAIL =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%231f2937'/><text x='50%' y='50%' fill='%23ffffff' font-size='24' font-family='Arial' dominant-baseline='middle' text-anchor='middle'>Live Stream</text></svg>";
+
 const LiveStreamPage = () => {
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,9 +75,7 @@ const LiveStreamPage = () => {
               {/* Thumbnail */}
               <div className="aspect-video bg-gray-800 rounded-md mb-2 flex items-center justify-center overflow-hidden">
                 <img
-                  src={
-                    secureUrl(stream.thumbnail?.url) || "/default-thumbnail.jpg"
-                  }
+                  src={secureUrl(stream.thumbnail?.url) || FALLBACK_THUMBNAIL}
                   alt={stream.title || "Live Stream Thumbnail"}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -94,7 +95,7 @@ const LiveStreamPage = () => {
                 className="text-sm text-red-500 font-bold mt-1"
                 aria-live="polite"
               >
-                LIVE • {stream.currentViewers || 0} viewers
+                LIVE - {stream.currentViewers || 0} viewers
               </p>
             </Link>
           ))
@@ -109,3 +110,4 @@ const LiveStreamPage = () => {
 };
 
 export default LiveStreamPage;
+

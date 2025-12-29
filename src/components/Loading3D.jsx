@@ -10,7 +10,7 @@ function NetflixLoader({ isLoading, onLoaded }) {
     "Hello Welcome",
     "Hola Bienvenido",
     "Bonjour Bienvenue",
-    "नमस्ते स्वागत है",
+    "Namaste Swagat Hai",
   ];
 
   useEffect(() => {
@@ -60,14 +60,7 @@ function NetflixLoader({ isLoading, onLoaded }) {
 
       return () => clearInterval(eraseInterval);
     }
-  }, [
-    currentLang,
-    isTyping,
-    cycleCount,
-    onLoaded,
-    greetings.length,
-    isLoading,
-  ]);
+  }, [currentLang, isTyping, cycleCount, onLoaded, greetings.length, isLoading]);
 
   return (
     <div
@@ -106,3 +99,4 @@ function NetflixLoader({ isLoading, onLoaded }) {
 }
 
 export default React.memo(NetflixLoader);
+

@@ -5,6 +5,7 @@ import axios from "axios";
 import { publishVideo, cancelVideoUpload, getJobStatus } from "../lib/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const SOCKET_URL = API_BASE_URL.replace(/\/$/, "");
 
 export const useVideoUpload = (userId) => {
   const [uploadState, setUploadState] = useState({
@@ -22,6 +23,11 @@ export const useVideoUpload = (userId) => {
   const socketRef = useRef(null);
   const pollingRef = useRef(null);
   const xhrRef = useRef(null);
+  const uploadStateRef = useRef(uploadState);
+
+  useEffect(() => {
+    uploadStateRef.current = uploadState;
+  }, [uploadState]);
 
   const cleanupSocket = useCallback(() => {
     if (socketRef.current) {
@@ -37,11 +43,51 @@ export const useVideoUpload = (userId) => {
     }
   }, []);
 
+  // Polling fallback for when socket is disconnected
+  const startPolling = useCallback(
+    (jobId) => {
+      if (pollingRef.current) return; // Already polling
+      console.log(`[Polling] Fallback activated for job ${jobId}.`);
+
+      pollingRef.current = setInterval(async () => {
+        try {
+          const response = await getJobStatus(jobId);
+          const jobData = response.data.data;
+
+          setUploadState((prev) => ({
+            ...prev,
+            progress: jobData.progress,
+            stage: jobData.state,
+            message: jobData.message,
+          }));
+
+          if (['completed', 'failed'].includes(jobData.state)) {
+            cleanupPolling();
+            if (jobData.state === 'completed') {
+              toast.success('Video processed (via polling)!');
+              setUploadState((prev) => ({ ...prev, result: jobData.result }));
+            } else {
+              toast.error('Upload failed (via polling).');
+              setUploadState((prev) => ({ ...prev, error: jobData.error }));
+            }
+          }
+        } catch (error) {
+          console.error('[Polling] Error fetching job status:', error);
+          // Stop polling on critical errors like 404
+          if (error.response?.status === 404) {
+            cleanupPolling();
+          }
+        }
+      }, 5000); // Poll every 5 seconds
+    },
+    [cleanupPolling]
+  );
+
   // Initialize socket connection
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io("localhost:8000", {
+    const socket = io(SOCKET_URL, {
       withCredentials: true,
       // The backend socket.io server is listening on the root path, not /api/v1
       // We need to override the default path which would be /api/v1/socket.io/
@@ -51,8 +97,10 @@ export const useVideoUpload = (userId) => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("📡 Connected to server for video upload updates.");
-      if (uploadState.jobId && !uploadState.result) cleanupPolling(); // Stop polling if socket reconnects
+      console.log("Connected to server for video upload updates.");
+      if (uploadStateRef.current.jobId && !uploadStateRef.current.result) {
+        cleanupPolling(); // Stop polling if socket reconnects
+      }
       socket.emit("join_user", userId);
     });
 
@@ -95,9 +143,10 @@ export const useVideoUpload = (userId) => {
     });
 
     socket.on("disconnect", () => {
-      console.log("📡 Disconnected from server.");
-      if (uploadState.jobId && !uploadState.result && !uploadState.error) {
-        startPolling(uploadState.jobId);
+      console.log("Disconnected from server.");
+      const currentJobId = uploadStateRef.current.jobId;
+      if (currentJobId && !uploadStateRef.current.result && !uploadStateRef.current.error) {
+        startPolling(currentJobId);
       }
     });
 
@@ -105,49 +154,7 @@ export const useVideoUpload = (userId) => {
       cleanupSocket();
       cleanupPolling();
     };
-  }, [userId, cleanupSocket, cleanupPolling]);
-
-  // Polling fallback for when socket is disconnected
-  const startPolling = useCallback(
-    (jobId) => {
-      if (pollingRef.current) return; // Already polling
-      console.log(`[Polling] Fallback activated for job ${jobId}.`);
-
-      pollingRef.current = setInterval(async () => {
-        try {
-          const response = await getJobStatus(jobId);
-          const jobData = response.data.data;
-
-          setUploadState((prev) => ({
-            ...prev,
-            progress: jobData.progress,
-            stage: jobData.state,
-            message: jobData.message,
-          }));
-
-          if (["completed", "failed"].includes(jobData.state)) {
-            cleanupPolling();
-            // The final state update will come from the socket event,
-            // but we can force it here if needed.
-            if (jobData.state === "completed") {
-              toast.success("Video processed (via polling)!");
-              setUploadState((prev) => ({ ...prev, result: jobData.result }));
-            } else {
-              toast.error("Upload failed (via polling).");
-              setUploadState((prev) => ({ ...prev, error: jobData.error }));
-            }
-          }
-        } catch (error) {
-          console.error("[Polling] Error fetching job status:", error);
-          // Stop polling on critical errors like 404
-          if (error.response?.status === 404) {
-            cleanupPolling();
-          }
-        }
-      }, 5000); // Poll every 5 seconds
-    },
-    [cleanupPolling, getJobStatus]
-  );
+  }, [userId, cleanupSocket, cleanupPolling, startPolling]);
 
   const uploadVideo = useCallback(
     async (formData) => {
@@ -194,7 +201,6 @@ export const useVideoUpload = (userId) => {
         }, 2000);
       } catch (error) {
         if (axios.isCancel(error)) {
-          // This is handled by the cancelUpload function, so we can just return.
           return;
         }
         const errorMessage =

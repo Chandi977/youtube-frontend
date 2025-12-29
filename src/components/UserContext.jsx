@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useState,
@@ -19,12 +20,6 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      const token = Cookies.get("authToken");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const response = await api.getCurrentUser(); // Assumes this calls /api/v1/users/me
         setUser(response.data.data);
@@ -32,6 +27,10 @@ export const UserProvider = ({ children }) => {
       } catch (error) {
         console.error("Session expired or invalid:", error);
         Cookies.remove("authToken");
+        Cookies.remove("accessToken");
+        Cookies.remove("refreshToken");
+        setUser(null);
+        setIsLoggedIn(false);
       } finally {
         setLoading(false);
       }
@@ -47,6 +46,8 @@ export const UserProvider = ({ children }) => {
 
   const handleLogout = useCallback(() => {
     Cookies.remove("authToken");
+    Cookies.remove("accessToken");
+    Cookies.remove("refreshToken");
     setUser(null);
     setIsLoggedIn(false);
   }, []);

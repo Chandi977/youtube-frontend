@@ -39,7 +39,7 @@ const VideoGrid = () => {
             channelAvatar={video.owner?.avatar}
             title={video.title}
             channel={video.owner?.username}
-            views={video.views}
+            views={video.viewsCount ?? video.views ?? 0}
             timestamp={video.createdAt}
           />
         ))}

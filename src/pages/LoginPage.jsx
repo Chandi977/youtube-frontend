@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../lib/api";
 import { useUser } from "../components/UserContext";
 import toast from "react-hot-toast";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie";
 import { useOAuth } from "../hooks/useOAuth";
 
 const LoginPage = () => {
@@ -21,8 +21,15 @@ const LoginPage = () => {
     setError("");
     try {
       const response = await loginUser({ email, password });
-      handleLoginSuccess(response.data.data.user);
-      Cookies.set("authToken", response.data.data.token, { expires: 7 });
+      const { user, token, refreshToken } = response.data.data;
+      handleLoginSuccess(user);
+      if (token) {
+        Cookies.set("authToken", token, { expires: 7 });
+        Cookies.set("accessToken", token, { expires: 7 });
+      }
+      if (refreshToken) {
+        Cookies.set("refreshToken", refreshToken, { expires: 7 });
+      }
       toast.success("Logged in successfully!");
       navigate("/"); // Redirect to home on success
     } catch (err) {
@@ -72,7 +79,7 @@ const LoginPage = () => {
               type="password"
               id="password"
               className="w-full px-3 py-2 mt-1 text-white bg-[#0f0f0f] border border-gray-700 rounded-md focus:outline-none focus:ring focus:ring-blue-500"
-              placeholder="••••••••"
+              placeholder="********"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -118,3 +125,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

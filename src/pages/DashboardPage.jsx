@@ -97,7 +97,7 @@ const DashboardPage = () => {
                 videoId={video._id}
                 thumbnail={video.thumbnail}
                 title={video.title}
-                views={video.views || 0}
+                views={video.viewsCount ?? video.views ?? 0}
                 timestamp={video.createdAt}
                 channel={user.username}
                 channelAvatar={user.avatar}

@@ -61,7 +61,7 @@ const Header = ({ onMenuClick }) => {
         <Link to="/" className="flex items-center gap-1 cursor-pointer">
           <Youtube color="#FF0000" size={24} />
           <span className="text-lg sm:text-xl font-semibold tracking-tighter">
-            YouTube
+            VideStream
           </span>
         </Link>
       </div>

@@ -229,12 +229,15 @@ const Comment = ({
               .map((reply) => (
                 <MemoizedComment
                   key={reply._id}
-                  {...reply}
+                  id={reply._id}
+                  text={reply.content}
+                  timestamp={reply.createdAt}
                   commentOwnerId={reply.owner?._id}
                   author={reply.owner?.username || "Unknown"}
                   avatar={reply.owner?.avatar || null}
                   likes={reply.likesCount || 0}
                   isLiked={reply.isLiked}
+                  replies={reply.replies || []}
                   onPostComment={onPostComment}
                   onUpdateComment={onUpdateComment}
                   onDeleteComment={onDeleteComment}

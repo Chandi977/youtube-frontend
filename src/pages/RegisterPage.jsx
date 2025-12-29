@@ -130,7 +130,7 @@ const RegisterPage = () => {
               id="password"
               name="password"
               className="w-full px-3 py-2 mt-1 text-white bg-[#0f0f0f] border border-gray-700 rounded-md focus:outline-none focus:ring focus:ring-blue-500"
-              placeholder="••••••••"
+              placeholder="********"
               onChange={handleChange}
               required
             />
@@ -194,3 +194,4 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+

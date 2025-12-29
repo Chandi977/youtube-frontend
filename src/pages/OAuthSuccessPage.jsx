@@ -2,30 +2,55 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../components/UserContext";
 import Cookies from "js-cookie";
+import * as api from "../lib/api";
 
 const OAuthSuccessPage = () => {
   const navigate = useNavigate();
   const { handleLoginSuccess } = useUser();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get("accessToken");
-    const refreshToken = params.get("refreshToken");
-    const userData = params.get("user"); // optional user info
+    const bootstrap = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const accessTokenFromQuery = params.get("accessToken");
+      const refreshTokenFromQuery = params.get("refreshToken");
+      const userData = params.get("user"); // optional user info
 
-    if (accessToken) {
+      // Prefer tokens from query (non-httpOnly) else rely on httpOnly cookies
+      const accessToken =
+        accessTokenFromQuery ||
+        Cookies.get("accessToken") ||
+        Cookies.get("authToken");
+      const refreshToken =
+        refreshTokenFromQuery || Cookies.get("refreshToken");
+
+      if (!accessToken) {
+        navigate("/login");
+        return;
+      }
+
       try {
-        const user = userData ? JSON.parse(decodeURIComponent(userData)) : null;
+        let user = userData
+          ? JSON.parse(decodeURIComponent(userData))
+          : null;
 
-        if (user) {
-          handleLoginSuccess(user, accessToken); // Update context with user info
+        // If user info not passed via query, fetch with existing cookies
+        if (!user) {
+          const res = await api.getCurrentUser();
+          user = res.data.data;
         }
 
-        // Store tokens in cookies
-        Cookies.set("accessToken", accessToken, { expires: 1 }); // 1 day
-        if (refreshToken) {
-          Cookies.set("refreshToken", refreshToken, { expires: 7 }); // 7 days
+        // Store tokens for client-side paths if present
+        if (accessTokenFromQuery) {
+          Cookies.set("authToken", accessTokenFromQuery, { expires: 1 });
+          Cookies.set("accessToken", accessTokenFromQuery, { expires: 1 });
         }
+        if (refreshTokenFromQuery) {
+          Cookies.set("refreshToken", refreshTokenFromQuery, { expires: 7 });
+        } else if (refreshToken) {
+          Cookies.set("refreshToken", refreshToken, { expires: 7 });
+        }
+
+        handleLoginSuccess(user); // Update context with user info
 
         // Send postMessage to opener (popup)
         if (window.opener) {
@@ -49,9 +74,9 @@ const OAuthSuccessPage = () => {
         console.error("Failed to process OAuth success:", err);
         navigate("/login");
       }
-    } else {
-      navigate("/login");
-    }
+    };
+
+    bootstrap();
   }, [handleLoginSuccess, navigate]);
 
   return (

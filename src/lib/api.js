@@ -42,13 +42,15 @@ export const getUserChannelProfile = (username) =>
   api.get(`/users/channel/${username}`);
 export const getWatchHistory = () => api.get("/users/watch-history");
 export const getFeed = () => api.get("/users/feed");
+// export const getVideoWatchHistory = () =>
+// api.get("/videos/watch-history");
 export const getRecommendedVideos = () => api.get("/users/recommended-videos");
 export const recommendChannels = () => api.get("/users/recommended-channels");
 export const getLikedVideos = async () => {
   const res = await api.get("/users/liked-videos");
   return res.data.data;
 };
-export const getHistory = () => api.get("/users/history");
+// export const getHistory = () => api.get("/users/history");
 
 // ================= VIDEO APIs =================
 // Public
@@ -71,7 +73,7 @@ export const updateVideo = (videoId, data) =>
   api.patch(`/videos/${videoId}`, data);
 export const deleteVideo = (videoId) => api.delete(`/videos/${videoId}`);
 export const togglePublishStatus = (videoId) =>
-  api.patch(`/videos/toggle/publish/${videoId}`);
+  api.patch(`/videos/${videoId}/toggle-publish`);
 
 // ================= JOBS APIs (for uploads) =================
 export const getJobStatus = (jobId) => api.get(`/jobs/${jobId}`);

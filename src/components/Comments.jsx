@@ -11,6 +11,8 @@ import {
 } from "../lib/api";
 import { useUser } from "./UserContext";
 
+const PAGE_SIZE = 10;
+
 const Comments = ({ videoId, videoOwnerId }) => {
   const { user, isLoggedIn } = useUser();
   const [comments, setComments] = useState([]);
@@ -34,7 +36,7 @@ const Comments = ({ videoId, videoOwnerId }) => {
 
         const response = await getVideoComments(videoId, {
           page: currentPage,
-          limit: 10,
+          limit: PAGE_SIZE,
         });
 
         const rawData = response?.data?.data || [];
@@ -49,10 +51,11 @@ const Comments = ({ videoId, videoOwnerId }) => {
         setComments((prev) =>
           currentPage === 1 ? formatted : [...prev, ...formatted]
         );
-        setTotalComments(formatted.length);
-
-        // TODO: Update hasNextPage based on backend pagination info
-        setHasNextPage(false);
+        const fetchedCount = formatted.length;
+        setTotalComments((prev) =>
+          currentPage === 1 ? fetchedCount : prev + fetchedCount
+        );
+        setHasNextPage(fetchedCount === PAGE_SIZE);
       } catch (err) {
         toast.error("Failed to load comments.");
         console.error(err);
@@ -88,7 +91,7 @@ const Comments = ({ videoId, videoOwnerId }) => {
       const payload = { content: text, video: videoId };
       if (parentCommentId) payload.parentId = parentCommentId;
 
-      const response = await addComment(payload, { page, limit: 10 });
+      const response = await addComment(payload, { page, limit: PAGE_SIZE });
       const updatedComments = normalizeComments(response?.data?.data);
 
       setComments(updatedComments);

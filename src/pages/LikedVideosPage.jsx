@@ -11,7 +11,11 @@ const LikedVideosPage = () => {
 
   useEffect(() => {
     if (userLoading) return;
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      setError("You must be logged in to view liked videos.");
+      return;
+    }
     const fetchLikedVideos = async () => {
       try {
         setLoading(true);
@@ -48,7 +52,7 @@ const LikedVideosPage = () => {
                 videoId={video._id}
                 thumbnail={video.thumbnail}
                 title={video.title}
-                views={video.views}
+                views={video.viewsCount ?? video.views ?? 0}
                 timestamp={video.createdAt}
                 channel={video.owner?.username}
                 channelAvatar={video.owner?.avatar}

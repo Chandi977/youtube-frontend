@@ -121,11 +121,11 @@ const VideoDetailPage = () => {
 
   useEffect(() => {
     fetchVideoData();
-  }, [id, isLoggedIn, user?._id]); // Use stable primitive values as dependencies
+  }, [fetchVideoData]);
 
   // Record video view
   useEffect(() => {
-    if (!video?._id || !isLoggedIn) return;
+    if (!video?._id) return;
 
     // Use sessionStorage to prevent re-recording views during the same session
     const viewedKey = `viewed_${video._id}`;
@@ -137,7 +137,16 @@ const VideoDetailPage = () => {
       try {
         // Optimistically update the UI
         setVideo((prev) =>
-          prev ? { ...prev, views: (prev.views || 0) + 1 } : prev
+          prev
+            ? {
+                ...prev,
+                viewsCount: (prev.viewsCount ?? prev.views ?? 0) + 1,
+                views:
+                  prev.views !== undefined
+                    ? (prev.views || 0) + 1
+                    : prev.views,
+              }
+            : prev
         );
         sessionStorage.setItem(viewedKey, "true");
         // Then, send the request to the backend
@@ -341,7 +350,7 @@ const VideoDetailPage = () => {
 
         <div className="bg-gray-800 p-4 rounded-xl">
           <p className="font-semibold">
-            {video.views || 0} views &bull;{" "}
+            {video.viewsCount ?? video.views ?? 0} views &bull;{" "}
             {video.createdAt
               ? new Date(video.createdAt).toLocaleDateString()
               : ""}
