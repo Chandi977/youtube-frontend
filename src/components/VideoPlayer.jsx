@@ -38,6 +38,8 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
   const [playingQuality, setPlayingQuality] = useState(-1);
   const [shouldLoad, setShouldLoad] = useState(false);
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [hlsError, setHlsError] = useState(false);
 
   // Lazy load observer
   const onIntersection = useCallback((entries) => {
@@ -72,6 +74,18 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
 
         hls.on(Hls.Events.ERROR, (_, data) => {
           console.error("HLS.js Error:", data);
+          if (!data?.fatal) return;
+          setHlsError(true);
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            hls.destroy();
+            if (video.canPlayType("application/vnd.apple.mpegurl")) {
+              video.src = sourceUrl;
+            }
+          }
         });
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
@@ -82,6 +96,7 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
           }));
           setQualities(allLevels);
           setCurrentQuality(-1);
+          hls.currentLevel = -1; // start in auto
           setPlayingQuality(hls.currentLevel);
         });
 
@@ -112,11 +127,19 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
     const handlePause = () => setIsPlaying(false);
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleDurationChange = () => setDuration(video.duration);
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => setIsBuffering(false);
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleSeeking = () => setIsBuffering(true);
 
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("durationchange", handleDurationChange);
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("seeking", handleSeeking);
     if (onPlay) video.addEventListener("play", onPlay);
 
     return () => {
@@ -129,6 +152,10 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("durationchange", handleDurationChange);
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("seeking", handleSeeking);
       if (onPlay) video.removeEventListener("play", onPlay);
     };
   }, [src, onPlay, shouldLoad]);
@@ -263,9 +290,20 @@ const VideoPlayer = ({ src, poster, onNext, onPrevious, onPlay }) => {
       />
 
       {/* Loading Spinner */}
-      {isSwitchingQuality && (
+      {(isSwitchingQuality || isBuffering) && (
         <div className="absolute inset-0 bg-black/50 flex justify-center items-center z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+          <div className="flex flex-col items-center gap-2 text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            <span className="text-sm">
+              {isSwitchingQuality ? "Switching quality..." : "Buffering..."}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {hlsError && (
+        <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          Stream recovered after an HLS error
         </div>
       )}
 

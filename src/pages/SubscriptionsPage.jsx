@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   getSubscribedChannels,
@@ -6,61 +6,58 @@ import {
 } from "../lib/api";
 import { secureUrl } from "../lib/utils";
 import { useUser } from "../components/UserContext";
+import { useQuery } from "@tanstack/react-query";
 
 const SubscriptionsPage = () => {
   const { user } = useUser();
-  const [channels, setChannels] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    data: channels = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["subscriptions", user?._id],
+    queryFn: async () => {
+      const subscriptions = await getSubscribedChannels(user._id);
+      const baseChannels = subscriptions.map((sub) => sub.channel) || [];
 
-  useEffect(() => {
-    if (!user?._id) {
-      setError("You must be logged in to see your subscriptions.");
-      setLoading(false);
-      return;
-    }
+      const withDetails = await Promise.all(
+        baseChannels.map(async (channel) => {
+          try {
+            const res = await getUserChannelProfile(channel.username);
+            const profile = res.data.data;
+            return {
+              ...channel,
+              fullName: profile.fullName,
+              coverImage: profile.coverImage,
+              subscribersCount: profile.subscribersCount,
+              channelsSubscribedToCount: profile.channelsSubscribedToCount,
+            };
+          } catch (err) {
+            console.error(
+              "Failed to load channel profile",
+              channel.username,
+              err
+            );
+            return channel;
+          }
+        })
+      );
 
-    const fetchSubscriptions = async () => {
-      try {
-        setLoading(true);
-        const subscriptions = await getSubscribedChannels(user._id);
-        const baseChannels = subscriptions.map((sub) => sub.channel) || [];
+      return withDetails;
+    },
+    enabled: !!user?._id,
+  });
 
-        // Enrich each channel with profile info (subs count, cover, full name)
-        const withDetails = await Promise.all(
-          baseChannels.map(async (channel) => {
-            try {
-              const res = await getUserChannelProfile(channel.username);
-              const profile = res.data.data;
-              return {
-                ...channel,
-                fullName: profile.fullName,
-                coverImage: profile.coverImage,
-                subscribersCount: profile.subscribersCount,
-                channelsSubscribedToCount: profile.channelsSubscribedToCount,
-              };
-            } catch (err) {
-              console.error("Failed to load channel profile", channel.username, err);
-              return channel; // Fallback to basic info
-            }
-          })
-        );
+  const errorMessage = useMemo(() => {
+    if (!user?._id) return "You must be logged in to see your subscriptions.";
+    if (isError) return "Failed to fetch subscriptions.";
+    return null;
+  }, [user?._id, isError]);
 
-        setChannels(withDetails);
-      } catch (err) {
-        setError("Failed to fetch subscriptions.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSubscriptions();
-  }, [user]);
-
-  if (loading)
+  if (isLoading)
     return <div className="p-6 text-center">Loading Subscriptions...</div>;
-  if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
+  if (errorMessage)
+    return <div className="p-6 text-center text-red-500">{errorMessage}</div>;
 
   return (
     <div className="p-6 bg-[#0f0f0f] min-h-[calc(100vh-3.5rem)]">

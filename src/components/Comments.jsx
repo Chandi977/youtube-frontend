@@ -1,8 +1,10 @@
 // Comments.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
 import Comment from "./Comment";
 import { User } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   getVideoComments,
   addComment,
@@ -10,18 +12,22 @@ import {
   deleteComment,
 } from "../lib/api";
 import { useUser } from "./UserContext";
+import { useScrollContainer } from "../contexts/ScrollContainerContext";
+import { CommentSkeleton } from "./Skeletons";
 
 const PAGE_SIZE = 10;
 
 const Comments = ({ videoId, videoOwnerId }) => {
   const { user, isLoggedIn } = useUser();
-  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [page, setPage] = useState(1);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [totalComments, setTotalComments] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const scrollRef = useScrollContainer();
+  const [scrollParent, setScrollParent] = useState(null);
+
+  useEffect(() => {
+    if (scrollRef?.current) {
+      setScrollParent(scrollRef.current);
+    }
+  }, [scrollRef]);
 
   // Helper to normalize API responses
   const normalizeComments = (data) => {
@@ -29,56 +35,39 @@ const Comments = ({ videoId, videoOwnerId }) => {
     return Array.isArray(data) ? data : [data];
   };
 
-  const fetchComments = useCallback(
-    async (currentPage = 1) => {
-      try {
-        currentPage === 1 ? setLoading(true) : setLoadingMore(true);
-
-        const response = await getVideoComments(videoId, {
-          page: currentPage,
-          limit: PAGE_SIZE,
-        });
-
-        const rawData = response?.data?.data || [];
-        const formatted = normalizeComments(rawData).map((c) => ({
-          ...c,
-          owner:
-            c.owner && typeof c.owner === "object"
-              ? c.owner
-              : { username: "Unknown", avatar: null },
-        }));
-
-        setComments((prev) =>
-          currentPage === 1 ? formatted : [...prev, ...formatted]
-        );
-        const fetchedCount = formatted.length;
-        setTotalComments((prev) =>
-          currentPage === 1 ? fetchedCount : prev + fetchedCount
-        );
-        setHasNextPage(fetchedCount === PAGE_SIZE);
-      } catch (err) {
-        toast.error("Failed to load comments.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["comments", videoId],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await getVideoComments(videoId, {
+        page: pageParam,
+        limit: PAGE_SIZE,
+      });
+      const rawData = response?.data?.data || [];
+      return normalizeComments(rawData).map((c) => ({
+        ...c,
+        owner:
+          c.owner && typeof c.owner === "object"
+            ? c.owner
+            : { username: "Unknown", avatar: null },
+      }));
     },
-    [videoId]
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length + 1 : undefined,
+    enabled: !!videoId,
+  });
+
+  const comments = useMemo(
+    () => (data?.pages ? data.pages.flat() : []),
+    [data]
   );
-
-  useEffect(() => {
-    if (!videoId) return;
-    setComments([]);
-    setPage(1);
-    fetchComments(1);
-  }, [videoId, fetchComments]);
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchComments(nextPage);
-  };
+  const totalComments = comments.length;
 
   const onPostComment = async (text, parentCommentId = null) => {
     if (!isLoggedIn) {
@@ -91,11 +80,8 @@ const Comments = ({ videoId, videoOwnerId }) => {
       const payload = { content: text, video: videoId };
       if (parentCommentId) payload.parentId = parentCommentId;
 
-      const response = await addComment(payload, { page, limit: PAGE_SIZE });
-      const updatedComments = normalizeComments(response?.data?.data);
-
-      setComments(updatedComments);
-      setTotalComments(updatedComments.length);
+      await addComment(payload, { page: 1, limit: PAGE_SIZE });
+      await refetch();
 
       toast.success("Comment posted!");
     } catch (err) {
@@ -113,21 +99,7 @@ const Comments = ({ videoId, videoOwnerId }) => {
 
     try {
       await updateComment(commentId, { updateContent: text });
-
-      // Update comment in state locally
-      const updateInComments = (commentsArray) => {
-        return commentsArray.map((c) => {
-          if (c._id === commentId) {
-            return { ...c, content: text };
-          }
-          if (c.replies && c.replies.length > 0) {
-            return { ...c, replies: updateInComments(c.replies) };
-          }
-          return c;
-        });
-      };
-
-      setComments((prev) => updateInComments(prev));
+      await refetch();
       toast.success("Comment updated!");
     } catch (err) {
       toast.error("Failed to update comment.");
@@ -143,21 +115,7 @@ const Comments = ({ videoId, videoOwnerId }) => {
 
     try {
       await deleteComment(commentId);
-
-      // Remove comment from state locally
-      const removeInComments = (commentsArray) => {
-        return commentsArray
-          .filter((c) => c._id !== commentId)
-          .map((c) => {
-            if (c.replies && c.replies.length > 0) {
-              return { ...c, replies: removeInComments(c.replies) };
-            }
-            return c;
-          });
-      };
-
-      setComments((prev) => removeInComments(prev));
-      setTotalComments((prev) => prev - 1);
+      await refetch();
       toast.success("Comment deleted!");
     } catch (err) {
       toast.error("Failed to delete comment.");
@@ -217,39 +175,51 @@ const Comments = ({ videoId, videoOwnerId }) => {
 
       {/* Comments List */}
       <div className="flex flex-col gap-6">
-        {loading && <p className="text-center">Loading comments...</p>}
-        {!loading && comments.length === 0 && (
+        {isLoading && (
+          <div className="flex flex-col gap-4">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <CommentSkeleton key={idx} />
+            ))}
+          </div>
+        )}
+        {!isLoading && comments.length === 0 && (
           <p className="text-gray-400 text-center py-4">
             No comments yet. Be the first to comment!
           </p>
         )}
-        {comments.map((comment) => (
-          <Comment
-            key={comment._id}
-            id={comment._id}
-            commentOwnerId={comment.owner?._id}
-            author={comment.owner?.username || "Unknown"}
-            avatar={comment.owner?.avatar || null}
-            timestamp={comment.createdAt}
-            text={comment.content}
-            likes={comment.likesCount || 0}
-            isLiked={comment.isLiked}
-            onPostComment={onPostComment}
-            onUpdateComment={onUpdateComment}
-            onDeleteComment={onDeleteComment}
-            replies={comment.replies || []}
-            videoOwnerId={videoOwnerId}
+        {comments.length > 0 && (
+          <Virtuoso
+            data={comments}
+            customScrollParent={scrollParent || undefined}
+            increaseViewportBy={200}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            itemContent={(_, comment) => (
+              <Comment
+                key={comment._id}
+                id={comment._id}
+                commentOwnerId={comment.owner?._id}
+                author={comment.owner?.username || "Unknown"}
+                avatar={comment.owner?.avatar || null}
+                timestamp={comment.createdAt}
+                text={comment.content}
+                likes={comment.likesCount || 0}
+                isLiked={comment.isLiked}
+                onPostComment={onPostComment}
+                onUpdateComment={onUpdateComment}
+                onDeleteComment={onDeleteComment}
+                replies={comment.replies || []}
+                videoOwnerId={videoOwnerId}
+              />
+            )}
           />
-        ))}
-        {hasNextPage && !loadingMore && (
-          <button
-            onClick={handleLoadMore}
-            className="w-full mt-4 px-4 py-2 bg-gray-700 rounded-full font-semibold hover:bg-gray-600"
-          >
-            Load More Comments
-          </button>
         )}
-        {loadingMore && <p className="text-center">Loading more comments...</p>}
+        {isFetchingNextPage && (
+          <p className="text-center">Loading more comments...</p>
+        )}
       </div>
     </div>
   );

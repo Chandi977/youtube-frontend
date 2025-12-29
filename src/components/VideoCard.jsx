@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { format as formatTimeAgo } from "timeago.js";
-import { secureUrl } from "../lib/utils";
+import { getCloudinarySrcSet, secureUrl } from "../lib/utils";
 
 const VideoCard = ({
   videoId,
@@ -16,9 +16,12 @@ const VideoCard = ({
   // Use owner object if available, otherwise fallback to individual props
   const channelName = owner?.username || channel;
   const avatarUrl = secureUrl(owner?.avatar || channelAvatar);
+  const rawThumbnail =
+    typeof thumbnail === "string" ? thumbnail : thumbnail?.url;
   const thumbnailUrl = secureUrl(
-    typeof thumbnail === "string" ? thumbnail : thumbnail?.url
+    rawThumbnail
   );
+  const thumbnailSrcSet = getCloudinarySrcSet(rawThumbnail);
   const timeAgo = timestamp ? formatTimeAgo(timestamp) : "";
 
   if (variant === "horizontal") {
@@ -28,7 +31,10 @@ const VideoCard = ({
           <div className="w-40 flex-shrink-0 relative aspect-video">
             <img
               src={thumbnailUrl}
+              srcSet={thumbnailSrcSet}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
+              decoding="async"
               alt={title || ""}
               className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
             />
@@ -53,7 +59,10 @@ const VideoCard = ({
         <div className="relative w-full aspect-video overflow-hidden rounded-xl">
           <img
             src={thumbnailUrl}
+            srcSet={thumbnailSrcSet}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             loading="lazy"
+            decoding="async"
             alt={title}
             className="w-full h-full object-cover"
           />

@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import AOS from "aos";
@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Loading3D from "./components/Loading3D";
+import { ScrollContainerProvider } from "./contexts/ScrollContainerContext";
 
 // Lazy load page components for better performance
 const VideoGrid = lazy(() => import("./components/VideoGrid"));
@@ -36,6 +37,7 @@ function App() {
   // Show loading screen only on the first visit per session
   const [loading, setLoading] = useState(!sessionStorage.getItem("hasVisited"));
   const location = useLocation();
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     AOS.init({
@@ -78,56 +80,64 @@ function App() {
               onClick={toggleSidebar}
             ></div>
           )}
-          <main className="flex-1 overflow-y-auto z-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Suspense fallback={<Loading3D />}>
-                  <Routes location={location} key={location.pathname}>
-                    <Route path="/" element={<VideoGrid />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route
-                      path="/oauth-success"
-                      element={<OAuthSuccessPage />}
-                    />
-                    <Route path="/upload" element={<UploadPage />} />
-                    <Route path="/video/:id" element={<VideoDetailPage />} />
-                    <Route path="/liked-videos" element={<LikedVideosPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
-                    <Route path="/results" element={<SearchResultsPage />} />
-                    <Route
-                      path="/channel/:username"
-                      element={<ChannelPage />}
-                    />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/library" element={<LibraryPage />} />
-                    <Route
-                      path="/playlist/:playlistId"
-                      element={<PlaylistDetailPage />}
-                    />
-                    <Route path="/go-live" element={<GoLivePage />} />
-                    <Route
-                      path="/live/:streamId"
-                      element={<LiveStreamViewerPage />}
-                    />
-                    <Route path="/live" element={<LiveStreamPage />} />
-                    <Route path="/healthcheck" element={<HealthCheckPage />} />
-                    <Route
-                      path="/subscriptions"
-                      element={<SubscriptionsPage />}
-                    />
-                    <Route path="/trending" element={<TrendingPage />} />
-                  </Routes>
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
-          </main>
+          <ScrollContainerProvider value={scrollRef}>
+            <main ref={scrollRef} className="flex-1 overflow-y-auto z-10">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Suspense fallback={<Loading3D />}>
+                    <Routes location={location} key={location.pathname}>
+                      <Route path="/" element={<VideoGrid />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route
+                        path="/oauth-success"
+                        element={<OAuthSuccessPage />}
+                      />
+                      <Route path="/upload" element={<UploadPage />} />
+                      <Route path="/video/:id" element={<VideoDetailPage />} />
+                      <Route
+                        path="/liked-videos"
+                        element={<LikedVideosPage />}
+                      />
+                      <Route path="/history" element={<HistoryPage />} />
+                      <Route path="/results" element={<SearchResultsPage />} />
+                      <Route
+                        path="/channel/:username"
+                        element={<ChannelPage />}
+                      />
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/library" element={<LibraryPage />} />
+                      <Route
+                        path="/playlist/:playlistId"
+                        element={<PlaylistDetailPage />}
+                      />
+                      <Route path="/go-live" element={<GoLivePage />} />
+                      <Route
+                        path="/live/:streamId"
+                        element={<LiveStreamViewerPage />}
+                      />
+                      <Route path="/live" element={<LiveStreamPage />} />
+                      <Route
+                        path="/healthcheck"
+                        element={<HealthCheckPage />}
+                      />
+                      <Route
+                        path="/subscriptions"
+                        element={<SubscriptionsPage />}
+                      />
+                      <Route path="/trending" element={<TrendingPage />} />
+                    </Routes>
+                  </Suspense>
+                </motion.div>
+              </AnimatePresence>
+            </main>
+          </ScrollContainerProvider>
         </div>
       </div>
     </>
