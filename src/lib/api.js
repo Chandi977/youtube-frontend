@@ -12,10 +12,15 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Optional global auth error handling
-    if (error.response?.status === 401) {
-      // e.g., redirect to login page
-      window.location.href = "/login";
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      const path = window.location.pathname || "";
+      const isAuthRoute = path === "/login" || path === "/register";
+      const requestUrl = error.config?.url || "";
+      const isSelfCheck = requestUrl.includes("/users/me");
+
+      if (!isAuthRoute && !isSelfCheck) {
+        window.location.assign("/login");
+      }
     }
     return Promise.reject(error);
   }
